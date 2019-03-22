@@ -40,6 +40,7 @@ class IndexController extends Controller
             'name'=>$name
         ];
         $userInfo=UserModel::where($where)->first();
+
         if(empty($userInfo)){
             $response = [
                 'errno' =>  40001,
@@ -51,12 +52,11 @@ class IndexController extends Controller
         if(password_verify($password,$pas)){
             $uid = $userInfo->uid;
             $key = 'token:' . $uid;
-            $token = Redis::get($key);
-            if(empty($token)){
+
                 $token = substr(md5(time() + $uid + rand(1000,9999)),10,20);
-                Redis::set($key,$token);
+
                 Redis::setTimeout($key,60*60*24*7);
-            }
+
             setcookie('xnn_uid',$uid,time()+86400,'/','lara.com',false,true);
             setcookie('xnn_token',$token,time()+86400,'/','lara.com',false,true);
             $request->session()->put('xnn_u_token',$token);
@@ -126,9 +126,11 @@ class IndexController extends Controller
         $data=[
             'name'=>$request->input('u_name'),
             'password'=>$pas,
+            'pass'=>$pas,
             'email'=>$request->input('u_email'),
             'reg_time'=>time(),
         ];
+        //var_dump($data);die;
         $uid=UserModel::insertGetId($data);
         if($uid){
             $key = 'token:' . $uid;
