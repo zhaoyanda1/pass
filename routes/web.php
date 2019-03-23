@@ -16,13 +16,13 @@ Route::get('/', function () {
 });
 
 //登陆
-Route::get('login','User\IndexController@loginView');
-Route::post('login','User\IndexController@loginAction');
-Route::post('api/login','User\IndexController@apiLogin');
 
+
+//登陆
+Route::get('login','Login\LoginController@login');
+Route::post('login','Login\LoginController@loginAction');
+Route::post('login/api','Login\LoginController@apiLogin');
 //注册
-Route::get('register','User\IndexController@registerView');
-Route::post('register','User\IndexController@registerAction');
-
-
-Route::get('center','User\IndexController@center')->middleware('check.login');
+Route::get('reg','Login\LoginController@reg');
+Route::post('/register','Login\LoginController@registerAction');
+Route::get('center','Login\LoginController@center')->middleware('check.login');

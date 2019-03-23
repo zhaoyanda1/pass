@@ -1,20 +1,12 @@
 <?php
-
-namespace App\Http\Controllers\User;
-
+namespace App\Http\Controllers\Login;
 use App\Model\UserModel;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Redis;
-
-class IndexController extends Controller
+class LoginController extends Controller
 {
-    //
-    /**
-     * @return \Illuminate\Contracts\View\Factory|\Illuminate\View\View
-     * 登陆页面
-     */
-    public function loginView(Request $request)
+    public function login(Request $request)
     {
         $redirect = urldecode($request->input('redirect'));
         if(empty($redirect)){
@@ -23,9 +15,8 @@ class IndexController extends Controller
         $info = [
             'redirect'  =>  $redirect,
         ];
-        return view('user.login',$info);
+        return view('login.login',$info);
     }
-
     /**
      * @param Request $request
      * @return array
@@ -40,7 +31,6 @@ class IndexController extends Controller
             'name'=>$name
         ];
         $userInfo=UserModel::where($where)->first();
-
         if(empty($userInfo)){
             $response = [
                 'errno' =>  40001,
@@ -50,15 +40,16 @@ class IndexController extends Controller
         }
         $pas = $userInfo->password;
         if(password_verify($password,$pas)){
-            $uid = $userInfo->uid;
+            $uid = $userInfo->id;
             $key = 'token:' . $uid;
-
+            $token = Redis::get($key);
+            if(empty($token)){
                 $token = substr(md5(time() + $uid + rand(1000,9999)),10,20);
-
-                Redis::setTimeout($key,60*60*24*7);
-
-            setcookie('xnn_uid',$uid,time()+86400,'/','lara.com',false,true);
-            setcookie('xnn_token',$token,time()+86400,'/','lara.com',false,true);
+                Redis::del($key);
+                Redis::hSet($key,'web',$token);
+            }
+            setcookie('xnn_uid',$uid,time()+86400,'/','pass.com',false,true);
+            setcookie('xnn_token',$token,time()+86400,'/','pass.com',false,true);
             $request->session()->put('xnn_u_token',$token);
             $request->session()->put('xnn_uid',$uid);
             $response = [
@@ -73,12 +64,9 @@ class IndexController extends Controller
         }
         return $response;
     }
-
     public function webLogin()
     {
-
     }
-
     /**
      * 个人中心
      */
@@ -86,12 +74,11 @@ class IndexController extends Controller
     {
         echo "个人中心";
     }
-
     /**
      * @return \Illuminate\Contracts\View\Factory|\Illuminate\View\View
      * 注册页面
      */
-    public  function registerView(Request $request)
+    public  function reg(Request $request)
     {
         $redirect = urldecode($request->input('redirect'));
         if(empty($redirect)){
@@ -100,9 +87,8 @@ class IndexController extends Controller
         $info = [
             'redirect'  =>  $redirect,
         ];
-        return view('user.register',$info);
+        return view('login.reg',$info);
     }
-
     public function registerAction(Request $request)
     {
         $pass=$request->input('u_pwd');
@@ -126,19 +112,17 @@ class IndexController extends Controller
         $data=[
             'name'=>$request->input('u_name'),
             'password'=>$pas,
-            'pass'=>$pas,
             'email'=>$request->input('u_email'),
-            'reg_time'=>time(),
+            'add_time'=>time(),
         ];
-        //var_dump($data);die;
         $uid=UserModel::insertGetId($data);
         if($uid){
             $key = 'token:' . $uid;
             $token = substr(md5(time() + $uid + rand(1000,9999)),10,20);
-            Redis::set($key,$token);
-            Redis::setTimeout($key,60*60*24*7);
-            setcookie('xnn_uid',$uid,time()+86400,'/','lara.com',false,true);
-            setcookie('xnn_token',$token,time()+86400,'/','lara.com',false,true);
+            Redis::del($key);
+            Redis::hSet($key,'web',$token);
+            setcookie('xnn_uid',$uid,time()+86400,'/','pass.com',false,true);
+            setcookie('xnn_token',$token,time()+86400,'/','pass.com',false,true);
             $request->session()->put('xnn_u_token',$token);
             $request->session()->put('xnn_uid',$uid);
             $response = [
@@ -153,7 +137,6 @@ class IndexController extends Controller
         }
         return $response;
     }
-
     public function apiLogin(Request $request)
     {
         $name = $request->input('u_name');
@@ -176,8 +159,8 @@ class IndexController extends Controller
             $token = Redis::get($key);
             if(empty($token)){
                 $token = substr(md5(time() + $uid + rand(1000,9999)),10,20);
-                Redis::set($key,$token);
-                Redis::setTimeout($key,60*60*24*7);
+                Redis::del($key);
+                Redis::hSet($key,'app',$token);
             }
             $response = [
                 'errno' =>  0,
